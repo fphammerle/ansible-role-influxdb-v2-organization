@@ -20,6 +20,15 @@
 - name: 'verify task name {{ influxdb_v2_task_name | to_json }} is unambiguous'
   assert:
     that: (_tasks.json.tasks | length) <= 1
+- name: "compose task's flux script"
+  set_fact:
+    _full_flux: |-
+      option task = {
+          name: "{{ influxdb_v2_task_name }}",
+          every: {{ influxdb_v2_task_every }},
+      }
+
+      {{ influxdb_v2_task_flux }}
 - name: 'create task {{ influxdb_v2_task_name | to_json }}'
   uri: # https://docs.influxdata.com/influxdb/v2.0/api/#operation/PostTasks
     method: POST
@@ -28,18 +37,33 @@
     body_format: json
     body:
       org: '{{ influxdb_v2_task_org }}'
-      flux: &full_flux |
-        option task = {
-            name: "{{ influxdb_v2_task_name }}",
-            every: {{ influxdb_v2_task_every }},
-        }
-
-        {{ influxdb_v2_task_flux }}
+      flux: '{{ _full_flux }}'
       status: active
     status_code: 201
   changed_when: true
   when: (_tasks.json.tasks | length) == 0
   register: _create
+- name: 'generate diff between expected and actual flux script of task {{ influxdb_v2_task_name | to_json }}'
+  command:
+    argv: [python3, -c, '{{ _script }}', '{{ _tasks.json.tasks[0].flux }}', '{{ _full_flux }}']
+  vars:
+    _script: >-
+      import sys, difflib;
+      print("".join(difflib.unified_diff(
+        (sys.argv[1] + "\n").splitlines(keepends=True),
+        (sys.argv[2] + "\n").splitlines(keepends=True),
+        fromfile="actual", tofile="expected",
+      )))
+  delegate_to: localhost
+  become: no
+  changed_when: false
+  register: _flux_diff
+  when: _create.skipped | default(False)
+- name: 'diff between expected and actual flux script of task {{ influxdb_v2_task_name | to_json }}'
+  debug:
+    msg: '{{ _flux_diff.stdout }}'
+  changed_when: _flux_diff.stdout
+  when: _create.skipped | default(False)
 - name: 'update task {{ influxdb_v2_task_name | to_json }}'
   uri: # https://docs.influxdata.com/influxdb/v2.0/api/#operation/PatchTasksID
     method: PATCH
@@ -48,9 +72,11 @@
     body_format: json
     body:
       every: '{{ influxdb_v2_task_every }}'
-      flux: *full_flux
+      flux: '{{ _full_flux }}'
       status: active
     status_code: 200
   changed_when: true
-  when: _create.skipped | default(False) # TODO
-  # TODO add diff
+  when: _create.skipped | default(False)
+    and ((_tasks.json.tasks[0].every != influxdb_v2_task_every)
+      or (_tasks.json.tasks[0].flux != _full_flux)
+      or (_tasks.json.tasks[0].status != "active"))
