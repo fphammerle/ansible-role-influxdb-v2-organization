@@ -17,6 +17,12 @@ influxdb_v2_task_flux: |
       |> to(host: "http://localhost:8086", org: "otherorg", token: "secret", bucket: "targetbucket")
 ```
 
+## Optional Input Variables
+
+```yaml
+influxdb_v2_task_flux_imports: [regexp, strings]
+```
+
 ## Rationale
 
 Ansible's `influxdb_*` modules do not support InfluxDB v2 as they are based on https://github.com/influxdata/influxdb-python:
