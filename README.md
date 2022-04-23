@@ -1,4 +1,4 @@
-# Ansible Role: InfluxDB v2 User
+# Ansible Role: InfluxDB v2 Task
 
 Ansible's `influxdb_*` modules do not support InfluxDB v2 as they are based on https://github.com/influxdata/influxdb-python:
 
@@ -7,22 +7,14 @@ Ansible's `influxdb_*` modules do not support InfluxDB v2 as they are based on h
 ## Required Input Variables
 
 ```yaml
-influxdb_v2_user_url: http://localhost:8086
-influxdb_v2_user_url_username: admin
-influxdb_v2_user_url_password: admin-password
-influxdb_v2_user_name: new-user
-```
-
-## Optional Input Variables
-
-```yaml
-influxdb_v2_user_fetch_authorizations: true # default: false, limit: 100
-```
-
-## Output Variables
-
-```
-influxdb_v2_user_id
-influxdb_v2_user_authorizations # when influxdb_v2_user_fetch_authorizations true
-influxdb_v2_user_url_cookies_string
+influxdb_v2_task_url: http://localhost:8086
+influxdb_v2_task_url_username: admin
+influxdb_v2_task_url_password: admin-password
+influxdb_v2_task_org: someorg
+influxdb_v2_task_name: sometask
+influxdb_v2_task_every: 5m
+influxdb_v2_task_flux: |
+  from(bucket: "source")
+      |> filter(fn: (r) => r["_field"] == "somefield")
+      |> to(host: "http://localhost:8086", org: "otherorg", token: "secret", bucket: "targetbucket")
 ```

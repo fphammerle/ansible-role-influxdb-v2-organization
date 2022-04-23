@@ -2,46 +2,55 @@
 - name: login
   uri:
     method: POST
-    url: '{{ influxdb_v2_user_url }}/api/v2/signin'
+    url: '{{ influxdb_v2_task_url }}/api/v2/signin'
     force_basic_auth: yes
     # naming `url_{username,password}` based on
     # https://web.archive.org/web/20211226100248/https://docs.ansible.com/ansible/latest/collections/community/grafana/grafana_datasource_module.html#parameter-url_username
-    url_username: '{{ influxdb_v2_user_url_username }}'
-    url_password: '{{ influxdb_v2_user_url_password }}'
+    url_username: '{{ influxdb_v2_task_url_username }}'
+    url_password: '{{ influxdb_v2_task_url_password }}'
     status_code: 204
   register: _login
-- name: check if user exists
-  uri:
+- name: 'retrieve current configuration of task {{ influxdb_v2_task_name | to_json }}'
+  uri: # https://docs.influxdata.com/influxdb/v2.0/api/#operation/GetTasks
     method: GET
-    url: '{{ influxdb_v2_user_url }}/api/v2/users?name={{ influxdb_v2_user_name | urlencode }}'
+    url: '{{ influxdb_v2_task_url }}/api/v2/tasks?org={{ influxdb_v2_task_org | urlencode }}&name={{ influxdb_v2_task_name | urlencode }}&limit=2'
     headers: {Cookie: '{{ _login.cookies_string }}'}
-    status_code: [200, 404]
-  register: _users
-- assert:
-    that: _users.status == 404 or (_users.json.users | length) == 1
-- name: create user
-  uri:
+    status_code: 200
+  register: _tasks
+- name: 'verify task name {{ influxdb_v2_task_name | to_json }} is unambiguous'
+  assert:
+    that: (_tasks.json.tasks | length) <= 1
+- name: 'create task {{ influxdb_v2_task_name | to_json }}'
+  uri: # https://docs.influxdata.com/influxdb/v2.0/api/#operation/PostTasks
     method: POST
-    url: '{{ influxdb_url }}/api/v2/users'
+    url: '{{ influxdb_v2_task_url }}/api/v2/tasks'
     headers: {Cookie: '{{ _login.cookies_string }}'}
     body_format: json
     body:
-      name: '{{ influxdb_v2_user_name }}'
+      org: '{{ influxdb_v2_task_org }}'
+      flux: &full_flux |
+        option task = {
+            name: "{{ influxdb_v2_task_name }}",
+            every: {{ influxdb_v2_task_every }},
+        }
+
+        {{ influxdb_v2_task_flux }}
+      status: active
     status_code: 201
   changed_when: true
-  when: _users.status == 404
-  register: _user
-- name: fetch authorizations
-  uri:
-    method: GET
-    url: '{{ influxdb_v2_user_url }}/api/v2/authorizations?user={{ influxdb_v2_user_name | urlencode }}&limit=100'
+  when: (_tasks.json.tasks | length) == 0
+  register: _create
+- name: 'update task {{ influxdb_v2_task_name | to_json }}'
+  uri: # https://docs.influxdata.com/influxdb/v2.0/api/#operation/PatchTasksID
+    method: PATCH
+    url: '{{ influxdb_v2_task_url }}/api/v2/tasks/{{ _tasks.json.tasks[0].id | urlencode }}'
     headers: {Cookie: '{{ _login.cookies_string }}'}
-  register: _authorizations
-  when: influxdb_v2_user_fetch_authorizations
-- name: set return values
-  set_fact:
-    influxdb_v2_user_id: >-
-      {{ _users.json.users[0].id if (_user.skipped | default(False)) else _user.json.id }}
-    influxdb_v2_user_authorizations: >-
-      {{ _authorizations.json.authorizations if influxdb_v2_user_fetch_authorizations else none }}
-    influxdb_v2_user_url_cookies_string: '{{ _login.cookies_string }}'
+    body_format: json
+    body:
+      every: '{{ influxdb_v2_task_every }}'
+      flux: *full_flux
+      status: active
+    status_code: 200
+  changed_when: true
+  when: _create.skipped | default(False) # TODO
+  # TODO add diff
