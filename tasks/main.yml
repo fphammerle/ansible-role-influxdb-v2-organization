@@ -44,6 +44,9 @@
   when: (_tasks.json.tasks | length) == 0
   register: _create
 - name: 'generate diff between expected and actual flux script of task {{ influxdb_v2_task_name | to_json }}'
+  # with debian bullseye's / ubuntu 21.10's ansible=2.10.7+merged+base+2.10.8+dfsg-1:
+  # > ERROR! couldn't resolve module/action 'ansible.utils.fact_diff'.
+  # https://docs.ansible.com/ansible/latest/collections/ansible/utils/fact_diff_module.html
   command:
     argv: [python3, -c, '{{ _script }}', '{{ _tasks.json.tasks[0].flux }}', '{{ _full_flux }}']
   vars:
