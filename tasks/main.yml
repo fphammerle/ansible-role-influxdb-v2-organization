@@ -36,4 +36,8 @@
   register: _create_organization
 - name: set return values
   set_fact:
+    influxdb_v2_organization_id: >-
+      {{ _create_organization.json.id
+         if not (_create_organization.skipped | default(False))
+         else _organizations.json.orgs[0].id }}
     influxdb_v2_organization_url_cookies_string: '{{ _login.cookies_string }}'

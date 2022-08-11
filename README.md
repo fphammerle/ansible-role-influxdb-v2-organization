@@ -14,6 +14,7 @@ influxdb_v2_organization_name: sometask
 ## Output Variables
 
 ```
+influxdb_v2_organization_id
 influxdb_v2_organization_url_cookies_string
 ```
 
