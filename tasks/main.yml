@@ -34,3 +34,6 @@
   changed_when: true
   when: _organizations.json.orgs | default([]) | length == 0
   register: _create_organization
+- name: set return values
+  set_fact:
+    influxdb_v2_organization_url_cookies_string: '{{ _login.cookies_string }}'

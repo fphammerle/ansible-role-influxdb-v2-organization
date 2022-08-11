@@ -11,6 +11,12 @@ influxdb_v2_organization_url_password: admin-password
 influxdb_v2_organization_name: sometask
 ```
 
+## Output Variables
+
+```
+influxdb_v2_organization_url_cookies_string
+```
+
 ## Rationale
 
 Ansible's `influxdb_*` modules do not support InfluxDB v2 as they are based on https://github.com/influxdata/influxdb-python:
