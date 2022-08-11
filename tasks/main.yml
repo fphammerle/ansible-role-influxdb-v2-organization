@@ -49,6 +49,15 @@
     status_code: 200
   register: _members
   when: influxdb_v2_organization_fetch_members
+- name: 'fetch owners of organisation {{ influxdb_v2_organization_name | to_json }}'
+  uri: # https://docs.influxdata.com/influxdb/v2.1/api/#operation/GetOrgsIDMembers
+    method: GET
+    url: '{{ influxdb_v2_organization_url }}/api/v2/orgs/{{ influxdb_v2_organization_id }}/owners'
+    headers: {Cookie: '{{ _login.cookies_string }}'}
+    status_code: 200
+  register: _owners
+  when: influxdb_v2_organization_fetch_owners
 - name: set return values
   set_fact:
     influxdb_v2_organization_members: '{{ _members.json.users | default(none) }}'
+    influxdb_v2_organization_owners: '{{ _owners.json.users | default(none) }}'
