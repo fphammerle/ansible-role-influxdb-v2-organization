@@ -2,90 +2,35 @@
 - name: login
   uri:
     method: POST
-    url: '{{ influxdb_v2_task_url }}/api/v2/signin'
+    url: '{{ influxdb_v2_organization_url }}/api/v2/signin'
     force_basic_auth: yes
     # naming `url_{username,password}` based on
     # https://web.archive.org/web/20211226100248/https://docs.ansible.com/ansible/latest/collections/community/grafana/grafana_datasource_module.html#parameter-url_username
-    url_username: '{{ influxdb_v2_task_url_username }}'
-    url_password: '{{ influxdb_v2_task_url_password }}'
+    url_username: '{{ influxdb_v2_organization_url_username }}'
+    url_password: '{{ influxdb_v2_organization_url_password }}'
     status_code: 204
   register: _login
-- name: 'retrieve current configuration of task {{ influxdb_v2_task_name | to_json }}'
-  uri: # https://docs.influxdata.com/influxdb/v2.0/api/#operation/GetTasks
+- name: 'check if organization {{ influxdb_v2_organization_name | to_json }} exists'
+  uri: # https://docs.influxdata.com/influxdb/v2.1/api/#operation/GetOrgs
     method: GET
-    url: '{{ influxdb_v2_task_url }}/api/v2/tasks?org={{ influxdb_v2_task_org | urlencode }}&name={{ influxdb_v2_task_name | urlencode }}&limit=2'
+    url: '{{ influxdb_v2_organization_url }}/api/v2/orgs?org={{ influxdb_v2_organization_name | urlencode }}&limit=2'
     headers: {Cookie: '{{ _login.cookies_string }}'}
-    status_code: 200
-  register: _tasks
-- name: 'verify task name {{ influxdb_v2_task_name | to_json }} is unambiguous'
+    status_code: [200, 404]
+  register: _organizations
+- name: 'verify organization name {{ influxdb_v2_organization_name | to_json }} is unambiguous'
   assert:
-    that: (_tasks.json.tasks | length) <= 1
-- name: "compose task's flux script"
-  set_fact:
-    _full_flux: |-
-      {% if influxdb_v2_task_flux_imports %}
-      {% for package in influxdb_v2_task_flux_imports %}
-      import {{ package | to_json }}
-      {% endfor %}
-
-      {% endif -%}
-      option task = {
-          name: "{{ influxdb_v2_task_name }}",
-          every: {{ influxdb_v2_task_every }},
-      }
-
-      {{ influxdb_v2_task_flux }}
-- name: 'create task {{ influxdb_v2_task_name | to_json }}'
+    that: >-
+      (_organizations.json.code is defined
+       and _organizations.json.code == "not found")
+      or (_organizations.json.orgs | length) == 1
+- name: 'create organization {{ influxdb_v2_organization_name | to_json }}'
   uri: # https://docs.influxdata.com/influxdb/v2.0/api/#operation/PostTasks
     method: POST
-    url: '{{ influxdb_v2_task_url }}/api/v2/tasks'
+    url: '{{ influxdb_v2_organization_url }}/api/v2/orgs'
     headers: {Cookie: '{{ _login.cookies_string }}'}
     body_format: json
-    body:
-      org: '{{ influxdb_v2_task_org }}'
-      flux: '{{ _full_flux }}'
-      status: active
+    body: {name: '{{ influxdb_v2_organization_name }}'}
     status_code: 201
   changed_when: true
-  when: (_tasks.json.tasks | length) == 0
-  register: _create
-- name: 'generate diff between expected and actual flux script of task {{ influxdb_v2_task_name | to_json }}'
-  # with debian bullseye's / ubuntu 21.10's ansible=2.10.7+merged+base+2.10.8+dfsg-1:
-  # > ERROR! couldn't resolve module/action 'ansible.utils.fact_diff'.
-  # https://docs.ansible.com/ansible/latest/collections/ansible/utils/fact_diff_module.html
-  command:
-    argv: [python3, -c, '{{ _script }}', '{{ _tasks.json.tasks[0].flux }}', '{{ _full_flux }}']
-  vars:
-    _script: >-
-      import sys, difflib;
-      print("".join(difflib.unified_diff(
-        (sys.argv[1] + "\n").splitlines(keepends=True),
-        (sys.argv[2] + "\n").splitlines(keepends=True),
-        fromfile="actual", tofile="expected",
-      )))
-  delegate_to: localhost
-  become: no
-  changed_when: false
-  register: _flux_diff
-  when: _create.skipped | default(False)
-- name: 'diff between expected and actual flux script of task {{ influxdb_v2_task_name | to_json }}'
-  debug:
-    msg: '{{ _flux_diff.stdout }}'
-  changed_when: _flux_diff.stdout
-  when: _create.skipped | default(False)
-- name: 'update task {{ influxdb_v2_task_name | to_json }}'
-  uri: # https://docs.influxdata.com/influxdb/v2.0/api/#operation/PatchTasksID
-    method: PATCH
-    url: '{{ influxdb_v2_task_url }}/api/v2/tasks/{{ _tasks.json.tasks[0].id | urlencode }}'
-    headers: {Cookie: '{{ _login.cookies_string }}'}
-    body_format: json
-    body:
-      every: '{{ influxdb_v2_task_every }}'
-      flux: '{{ _full_flux }}'
-      status: active
-    status_code: 200
-  changed_when: true
-  when: _create.skipped | default(False)
-    and ((_tasks.json.tasks[0].every != influxdb_v2_task_every)
-      or (_tasks.json.tasks[0].flux != _full_flux)
-      or (_tasks.json.tasks[0].status != "active"))
+  when: _organizations.json.orgs | default([]) | length == 0
+  register: _create_organization

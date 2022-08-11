@@ -1,26 +1,14 @@
-# Ansible Role: InfluxDB v2 Task
+# Ansible Role: InfluxDB v2 Organization
 
-Ansible role creating/updating [tasks](https://docs.influxdata.com/influxdb/cloud/process-data/manage-tasks/create-task/) in InfluxDB v2.
+Ansible role creating [organizations](https://docs.influxdata.com/influxdb/cloud/organizations/view-orgs/) in InfluxDB v2.
 
 ## Required Input Variables
 
 ```yaml
-influxdb_v2_task_url: http://localhost:8086
-influxdb_v2_task_url_username: admin
-influxdb_v2_task_url_password: admin-password
-influxdb_v2_task_org: someorg
-influxdb_v2_task_name: sometask
-influxdb_v2_task_every: 5m
-influxdb_v2_task_flux: |
-  from(bucket: "source")
-      |> filter(fn: (r) => r["_field"] == "somefield")
-      |> to(host: "http://localhost:8086", org: "otherorg", token: "secret", bucket: "targetbucket")
-```
-
-## Optional Input Variables
-
-```yaml
-influxdb_v2_task_flux_imports: [regexp, strings]
+influxdb_v2_organization_url: http://localhost:8086
+influxdb_v2_organization_url_username: admin
+influxdb_v2_organization_url_password: admin-password
+influxdb_v2_organization_name: sometask
 ```
 
 ## Rationale
