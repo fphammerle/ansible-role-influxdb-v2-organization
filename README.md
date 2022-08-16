@@ -14,6 +14,9 @@ influxdb_v2_organization_name: sometask
 ## Optional Input Variables
 
 ```yaml
+influxdb_v2_organization_buckets_create: # does not overwrite; default: [] (no new buckets)
+- {name: abcdef, retention_rules: []}
+- {name: ghijkl, retention_rules: []}
 influxdb_v2_organization_fetch_members: true # default: false
 influxdb_v2_organization_fetch_owners: true # default: false
 ```

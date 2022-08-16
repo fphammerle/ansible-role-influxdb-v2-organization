@@ -41,6 +41,31 @@
          if not (_create_organization.skipped | default(False))
          else _organizations.json.orgs[0].id }}
     influxdb_v2_organization_url_cookies_string: '{{ _login.cookies_string }}'
+- name: retrieve list of buckets
+  uri: # https://docs.influxdata.com/influxdb/v2.3/api/#operation/GetBuckets
+    method: GET
+    url: '{{ influxdb_v2_organization_url }}/api/v2/buckets?orgID={{ influxdb_v2_organization_id | urlencode }}'
+    headers: {Cookie: '{{ _login.cookies_string }}'}
+    status_code: 200
+  register: _list_buckets
+  when: influxdb_v2_organization_buckets_create
+- name: verify only supported settings were provided for buckets
+  assert: {that: "{{ item.keys() is subset(['name', 'retention_rules']) }}"}
+  loop: '{{ influxdb_v2_organization_buckets_create }}'
+- name: create missing buckets
+  uri:
+    method: POST
+    url: '{{ influxdb_v2_organization_url }}/api/v2/buckets'
+    headers: {Cookie: '{{ _login.cookies_string }}'}
+    body_format: json
+    body:
+      orgID: '{{ influxdb_v2_organization_id }}'
+      name: '{{ item.name }}'
+      retentionRules: '{{ item.retention_rules }}'
+    status_code: 201
+  changed_when: true
+  when: item.name not in (_list_buckets.json.buckets | map(attribute='name'))
+  loop: '{{ influxdb_v2_organization_buckets_create }}'
 - name: 'fetch members of organisation {{ influxdb_v2_organization_name | to_json }}'
   uri: # https://docs.influxdata.com/influxdb/v2.1/api/#operation/GetOrgsIDMembers
     method: GET
