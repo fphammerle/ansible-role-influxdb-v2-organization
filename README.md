@@ -14,16 +14,16 @@ influxdb_v2_organization_name: sometask
 ## Optional Input Variables
 
 ```yaml
-influxdb_v2_user_fetch_members: true # default: false
-influxdb_v2_user_fetch_owners: true # default: false
+influxdb_v2_organization_fetch_members: true # default: false
+influxdb_v2_organization_fetch_owners: true # default: false
 ```
 
 ## Output Variables
 
 ```
 influxdb_v2_organization_id
-influxdb_v2_user_fetch_members # when influxdb_v2_user_fetch_members true
-influxdb_v2_user_fetch_owners # when influxdb_v2_user_fetch_owners true
+influxdb_v2_organization_fetch_members # when influxdb_v2_organization_fetch_members true
+influxdb_v2_organization_fetch_owners # when influxdb_v2_organization_fetch_owners true
 influxdb_v2_organization_url_cookies_string
 ```
 
