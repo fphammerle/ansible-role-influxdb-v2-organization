@@ -1,3 +1,4 @@
 influxdb_v2_organization_buckets_create: []
+influxdb_v2_organization_fetch_buckets: false
 influxdb_v2_organization_fetch_members: false
 influxdb_v2_organization_fetch_owners: false

@@ -17,6 +17,7 @@ influxdb_v2_organization_name: sometask
 influxdb_v2_organization_buckets_create: # does not overwrite; default: [] (no new buckets)
 - {name: abcdef, retention_rules: []}
 - {name: ghijkl, retention_rules: []}
+influxdb_v2_organization_fetch_buckets: true # default: false
 influxdb_v2_organization_fetch_members: true # default: false
 influxdb_v2_organization_fetch_owners: true # default: false
 ```
@@ -25,6 +26,7 @@ influxdb_v2_organization_fetch_owners: true # default: false
 
 ```
 influxdb_v2_organization_id
+influxdb_v2_organization_buckets # when influxdb_v2_organization_fetch_buckets true
 influxdb_v2_organization_members # when influxdb_v2_organization_fetch_members true
 influxdb_v2_organization_owners # when influxdb_v2_organization_fetch_owners true
 influxdb_v2_organization_url_cookies_string

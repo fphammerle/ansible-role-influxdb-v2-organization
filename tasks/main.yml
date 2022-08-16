@@ -41,7 +41,8 @@
          if not (_create_organization.skipped | default(False))
          else _organizations.json.orgs[0].id }}
     influxdb_v2_organization_url_cookies_string: '{{ _login.cookies_string }}'
-- name: retrieve list of buckets
+- &list_buckets_task
+  name: retrieve list of buckets
   uri: # https://docs.influxdata.com/influxdb/v2.3/api/#operation/GetBuckets
     method: GET
     url: '{{ influxdb_v2_organization_url }}/api/v2/buckets?orgID={{ influxdb_v2_organization_id | urlencode }}'
@@ -49,6 +50,7 @@
     status_code: 200
   register: _list_buckets
   when: influxdb_v2_organization_buckets_create
+    or influxdb_v2_organization_fetch_buckets
 - name: verify only supported settings were provided for buckets
   assert: {that: "{{ item.keys() is subset(['name', 'retention_rules']) }}"}
   loop: '{{ influxdb_v2_organization_buckets_create }}'
@@ -66,6 +68,16 @@
   changed_when: true
   when: item.name not in (_list_buckets.json.buckets | map(attribute='name'))
   loop: '{{ influxdb_v2_organization_buckets_create }}'
+  register: _create_buckets
+- <<: *list_buckets_task
+  when: _create_buckets.changed and influxdb_v2_organization_fetch_buckets
+  register: _list_buckets_after_creation
+- name: set return values
+  set_fact:
+    influxdb_v2_organization_buckets: >-
+      {{ _list_buckets_after_creation.json.buckets
+         | default(_list_buckets.json.buckets) }}
+  when: influxdb_v2_organization_fetch_buckets
 - name: 'fetch members of organisation {{ influxdb_v2_organization_name | to_json }}'
   uri: # https://docs.influxdata.com/influxdb/v2.1/api/#operation/GetOrgsIDMembers
     method: GET
