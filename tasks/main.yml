@@ -5,6 +5,7 @@
     url: '{{ influxdb_v2_organization_url }}/api/v2/signin'
     force_basic_auth: yes
     # naming `url_{username,password}` based on
+    # https://web.archive.org/web/20221009115935/https://docs.ansible.com/ansible/2.10/collections/ansible/builtin/uri_module.html#parameter-url_password
     # https://web.archive.org/web/20211226100248/https://docs.ansible.com/ansible/latest/collections/community/grafana/grafana_datasource_module.html#parameter-url_username
     url_username: '{{ influxdb_v2_organization_url_username }}'
     url_password: '{{ influxdb_v2_organization_url_password }}'
